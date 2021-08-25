@@ -1,3 +1,4 @@
+import logging
 import random
 
 HANGMAN_PHOTOS = {
@@ -67,6 +68,9 @@ def show_hidden_word(secret_word, old_letters_guessed):
 
 
 def main():
+    logging.basicConfig(level=logging.INFO)
+    logging.debug("Starting game ")
+    logging.info(len(HANGMAN_PHOTOS))
     tries = 1
     guessed_letters = []
     letters_guessed = []
@@ -77,7 +81,7 @@ def main():
     random_word = suggest_random_word(word_list)
 
     while True:
-        print(f"random_word: {random_word}")
+        logging.debug(f"random_word: {random_word}")
         print(show_hidden_word(random_word, letters_guessed))
         user_choice = input("Please type your guess letter: ").lower()
 
