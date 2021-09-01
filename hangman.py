@@ -1,117 +1,179 @@
+from colorama import Style, Fore
 import logging
-import random
+
+MAX_TRIES = 6
+
+WELCOME_LOGO = r"""
+    _    _
+   | |  | |
+   | |__| | __ _ _ __   __ _ _ __ ___   __ _ _ __
+   |  __  |/ _' | '_ \ / _' | '_ ' _ \ / _' | '_ \
+   | |  | | (_| | | | | (_| | | | | | | (_| | | | |
+   |_|  |_|\__,_|_| |_|\__, |_| |_| |_|\__,_|_| |_|
+                        __/ |
+                        |___/"""
+
+GAME_OVER = r"""
+  __ _   __ _  _ __ ___    ___     ___  __   __  ___  _ __ 
+ / _` | / _` || '_ ` _ \  / _ \   / _ \ \ \ / / / _ \| '__|
+| (_| || (_| || | | | | ||  __/  | (_) | \ V / |  __/| |   
+ \__, | \__,_||_| |_| |_| \___|   \___/   \_/   \___||_|   
+  __/ |                                                    
+ |___/ """
+
+WINNER = r"""
+ __      __  ___   _  _   _  _   ___   ___ 
+ \ \    / / |_ _| | \| | | \| | | __| | _ \
+  \ \/\/ /   | |  | .` | | .` | | _|  |   /
+   \_/\_/   |___| |_|\_| |_|\_| |___| |_|_\
+"""
 
 HANGMAN_PHOTOS = {
-    1:  r"""x-------x""",
-    2:  r"""x-------x
+    0: r"""x-------x""",
+    1: r"""x-------x
 |
 |
 |
 |
 |""",
-    3:  r"""x-------x
+    2: r"""x-------x
 |       |
 |       0
 |
 |
 |""",
-    4:  r"""x-------x
+    3: r"""x-------x
 |       |
 |       0
 |       |
 |
 |""",
-    5:  r"""x-------x
+    4: r"""x-------x
 |       |
 |       0
 |      /|\
 |
 |""",
-    6:  r"""x-------x
+    5: r"""x-------x
 |       |
 |       0
 |      /|\
 |      /
 |""",
-    7:  r"""x-------x
+    6: r"""x-------x
 |       |
 |       0
 |      /|\
 |      / \
 |"""
-                  }
+}
 
 
-def suggest_random_word(content: list) -> str:
-    pick_random_word = content[random.randint(0, 6)]
-    return pick_random_word
+def print_logo():
+    print(WELCOME_LOGO)
+    print(MAX_TRIES)
 
 
-def print_hangman(num_of_tries: int) -> None:
-    """Print current hangman photo.
-
-    :param num_of_tries: num of the photo to print.
-    :type num_of_tries: int
-    :return: None.
-    """
-    print(HANGMAN_PHOTOS[num_of_tries])
+def check_win(secret_word, old_letters_guessed):
+    chars = ''
+    win = True
+    for char in secret_word:
+        if char in old_letters_guessed:
+            chars = chars + char
+        else:
+            win = False
+            break
+    return win
 
 
 def show_hidden_word(secret_word, old_letters_guessed):
+    """Shows the hidden word. letters that are not guessed are replaced with "_"
+
+    :param secret_word: str
+    :param old_letters_guessed: list
+    :return: str
+    """
     guess = ''
     for char in secret_word:
         if char in old_letters_guessed:
-            guess = guess + char + " "
+            guess += char + " "
         else:
-            guess = guess + "_" + " "
+            guess += "_" + " "
     return guess
 
 
-def main():
-    logging.basicConfig(level=logging.INFO)
-    logging.debug("Starting game ")
-    logging.info(len(HANGMAN_PHOTOS))
-    tries = 1
-    guessed_letters = []
-    letters_guessed = []
+def check_valid_input(letter_guessed, old_letters_guessed):
+    if not letter_guessed.isalpha():
+        return False
+    letter_guessed = letter_guessed.lower()
+    return len(letter_guessed) == 1 and letter_guessed not in old_letters_guessed
 
-    with open(r"C:\python\words.txt", "r", encoding='UTF8') as input_file:
+
+def try_update_letter_guessed(letter_guessed, old_letters_guessed):
+    if check_valid_input(letter_guessed, old_letters_guessed):
+        old_letters_guessed.append(letter_guessed)
+        return True
+    else:
+        print("X")
+        print("->".join(sorted(old_letters_guessed)))
+        return False
+
+
+def choose_word(file_path: str, index: int) -> str:
+    """Chooses a word from file according to the index number
+
+    :param file_path: str
+    :param index: int
+    :return: str
+    """
+    with open(file_path, "r", encoding='UTF8') as input_file:
         word_list = input_file.read().splitlines()
 
-    random_word = suggest_random_word(word_list)
+    word = word_list[index]
+
+    return word
+
+
+def main():
+    # logging.basicConfig(level=logging.DEBUG)
+    old_letters_guessed = []
+    num_of_tries = 0
+    print_logo()
+    # file_path = input("Enter file path: ")
+    file_path = "C:\\python\\words.txt"
+    index_word = int(input("Enter index: "))
+    secret_word = choose_word(file_path, index_word)
+    logging.debug(secret_word)
+    print("Let's start!")
+    print(show_hidden_word(secret_word, old_letters_guessed))
 
     while True:
-        logging.debug(f"random_word: {random_word}")
-        print(show_hidden_word(random_word, letters_guessed))
-        user_choice = input("Please type your guess letter: ").lower()
+        letter_guessed = input("Guess a letter: ")
+        letter_valid = try_update_letter_guessed(letter_guessed, old_letters_guessed)
+        logging.debug(f"old_letters_guessed :{old_letters_guessed}\n")
 
-        if len(user_choice) > 1:
-            print("\n\n### You entered more than one letter. Game Over! ###")
+        # invalid input
+        if not letter_valid:
+            continue
+
+        # wrong guess
+        if letter_guessed not in secret_word:
+            num_of_tries += 1
+            print(f"{Fore.RED} :( {Style.RESET_ALL}\n")
+            print(HANGMAN_PHOTOS[num_of_tries])
+            print()
+
+        print(show_hidden_word(secret_word, old_letters_guessed))
+
+        # win game
+        if check_win(secret_word, old_letters_guessed):
+            print(f"{Fore.GREEN} {WINNER} {Style.RESET_ALL}\n")
             break
 
-        guessed_letters.append(user_choice)
-
-        for letter in user_choice:
-            if letter in random_word and letter not in letters_guessed:
-                letters_guessed.append(letter)
-            elif letter not in letters_guessed:
-                tries += 1
-            else:
-                pass
-
-        print(f"letters guessed: {letters_guessed}")
-
-        # dict used to remove duplicates
-        if sorted(list(dict.fromkeys(random_word))) == sorted(letters_guessed):
-            print("\n\n---### W I N N E R ###---\n\n")
-            print(show_hidden_word(random_word, letters_guessed))
+        # lose game
+        if num_of_tries >= MAX_TRIES:
+            print(f"{Fore.RED} {GAME_OVER} {Style.RESET_ALL}\n")
             break
-        elif tries == 7:
-            print_hangman(tries)
-            print("\n##### GAME OVER #####\n")
-            break
-        else:
-            print_hangman(tries)
 
 
 if __name__ == '__main__':
